@@ -8,7 +8,6 @@ import re
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 # ---------------- content ----------------
-TIP_NO   = "SWIFTUI TIP  ·  001"
 HEADLINE = "Animate numbers\nwith one modifier"
 FILENAME = "PriceView.swift"
 CODE = '''// One modifier. Buttery-smooth digits.
@@ -33,25 +32,25 @@ HANDLE  = "linkedin.com/in/erkinazizi"
 S = 2  # supersampling factor
 W = H = 1200 * S
 
-BG_TOP    = (13, 14, 20)      # near-black indigo
-BG_BOT    = (24, 25, 34)
-ORANGE    = (240, 81, 56)     # Swift orange #F05138
-ORANGE_HI = (255, 122, 89)
-CARD_BG   = (30, 31, 39)      # code window
-CARD_HDR  = (38, 39, 49)
-STROKE    = (55, 57, 70)
-WHITE     = (245, 246, 250)
-MUTED     = (140, 145, 160)
+BG_TOP    = (209, 223, 230)   # powder blue — matches reference image
+BG_BOT    = (225, 232, 238)
+ORANGE    = (0, 122, 255)
+ORANGE_HI = (0, 145, 255)
+CARD_BG   = (255, 255, 255)
+CARD_HDR  = (242, 244, 247)
+STROKE    = (210, 215, 220)
+INK       = (18,  18,  18)    # near-black for headlines & footer
+MUTED     = (130, 142, 155)   # subtle labels
 
-# Xcode "Default (Dark)" token colors
-C_PLAIN   = (255, 255, 255)
-C_KEYWORD = (252, 95, 163)    # pink
-C_TYPE    = (93, 216, 255)    # cyan
-C_STRING  = (252, 106, 93)    # coral
-C_NUMBER  = (208, 191, 105)   # yellow
-C_COMMENT = (108, 121, 134)   # gray
-C_ATTR    = (253, 143, 63)    # orange (@State etc.)
-C_CALL    = (103, 183, 164)   # teal (methods / modifiers)
+# Xcode "Default (Light)" inspired token colors
+C_PLAIN   = (30, 30, 30)
+C_KEYWORD = (180, 0, 150)
+C_TYPE    = (40, 130, 140)
+C_STRING  = (200, 30, 30)
+C_NUMBER  = (30, 30, 200)
+C_COMMENT = (100, 110, 120)
+C_ATTR    = (150, 80, 0)
+C_CALL    = (60, 110, 180)
 
 import os
 FONT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts")
@@ -106,55 +105,39 @@ for y in range(H):
     dr.line([(0, y), (W, y)], fill=tuple(
         int(a + (b - a) * t) for a, b in zip(BG_TOP, BG_BOT)))
 
-# soft orange glow, bottom-right
-glow = Image.new("RGB", (W, H), (0, 0, 0))
-gd = ImageDraw.Draw(glow)
-gd.ellipse([W*0.55, H*0.62, W*1.35, H*1.42], fill=(60, 18, 10))
-gd.ellipse([-W*0.35, -H*0.40, W*0.35, H*0.30], fill=(16, 20, 34))
-glow = glow.filter(ImageFilter.GaussianBlur(220*S/2))
-img  = Image.blend(img, Image.composite(glow, img, Image.new("L",(W,H),255)), 0.0)
-img  = Image.frombytes("RGB", (W,H), bytes(
-    min(255, a + b) for a, b in zip(img.tobytes(), glow.tobytes())))
-dr = ImageDraw.Draw(img)
-
-# faint dot grid (craft detail)
-for gx in range(0, W, 48*S):
-    for gy in range(0, H, 48*S):
-        dr.ellipse([gx, gy, gx+2*S, gy+2*S], fill=(255,255,255,8) if False else (34,36,46))
-
 M = 84 * S  # outer margin
 
-# ---- top row: badge + handle ----
-badge_f = mono(17*S, "Medium")
-bt = TIP_NO
-bw = dr.textlength(bt, font=badge_f)
-bx, by = M, M
-pad_x, pad_y = 20*S, 11*S
-dr.rounded_rectangle([bx, by, bx+bw+2*pad_x, by+17*S+2*pad_y],
-                     radius=999, outline=ORANGE, width=2*S)
-dr.text((bx+pad_x, by+pad_y), bt, font=badge_f, fill=ORANGE_HI)
+# ---- centered vertical layout ----
+# Calculate total content height first, then derive all Y positions.
+_head_lines = HEADLINE.split("\n")
+_n           = len(_head_lines)
+HEAD_H  = (_n - 1) * 80*S + 68*S   # headline block height (line-spacing + last font height)
+GAP_HC  = 60*S                      # headline → code window gap
+CODE_H  = 600*S                     # fixed code window height
+GAP_CF  = 55*S                      # code window → footer gap
+FOOT_H  = 100*S                     # footer block height (separator + name + role)
+TOTAL_H = HEAD_H + GAP_HC + CODE_H + GAP_CF + FOOT_H
+hy      = (H - TOTAL_H) // 2        # vertically centered start
 
-hf = mono(17*S, "Regular")
-hw = dr.textlength(HANDLE, font=hf)
-dr.text((W - M - hw, by + pad_y), HANDLE, font=hf, fill=MUTED)
-
-# ---- headline ----
+# ---- headline (centered) ----
 head_f = inter(68*S, 750)
-hy = by + 100*S
-for i, line in enumerate(HEADLINE.split("\n")):
-    dr.text((M, hy + i*80*S), line, font=head_f, fill=WHITE)
+for i, line in enumerate(_head_lines):
+    lw = dr.textlength(line, font=head_f)
+    dr.text(((W - lw) // 2, hy + i*80*S), line, font=head_f, fill=INK)
 
 # ---- code window ----
-cw_x0, cw_y0 = M, hy + 205*S
-cw_x1, cw_y1 = W - M, H - 190*S
+cw_x0 = M
+cw_y0 = hy + HEAD_H + GAP_HC
+cw_x1 = W - M
+cw_y1 = cw_y0 + CODE_H
 r = 22*S
 
 # shadow
 sh = Image.new("RGBA", (W, H), (0,0,0,0))
 sd = ImageDraw.Draw(sh)
-sd.rounded_rectangle([cw_x0, cw_y0+14*S, cw_x1, cw_y1+14*S], radius=r, fill=(0,0,0,150))
+sd.rounded_rectangle([cw_x0, cw_y0+14*S, cw_x1, cw_y1+14*S], radius=r, fill=(0,0,0,20))
 sh = sh.filter(ImageFilter.GaussianBlur(30*S))
-img.paste(Image.new("RGB",(W,H),(0,0,0)), (0,0), sh)
+img.paste(Image.new("RGB",(W,H),BG_TOP), (0,0), sh)
 dr = ImageDraw.Draw(img)
 
 dr.rounded_rectangle([cw_x0, cw_y0, cw_x1, cw_y1], radius=r,
@@ -185,24 +168,25 @@ ln_f    = mono(17*S, "Regular")
 for i, line in enumerate(CODE.split("\n")):
     y = ty + i * line_h
     # line number
-    dr.text((cw_x0 + 20*S, y + 4*S), f"{i+1:>2}", font=ln_f, fill=(80, 84, 98))
+    dr.text((cw_x0 + 20*S, y + 4*S), f"{i+1:>2}", font=ln_f, fill=(180, 180, 180))
     x = tx + 20*S
     for text, color in tokenize(line):
         dr.text((x, y), text, font=code_f, fill=color)
         x += dr.textlength(text, font=code_f)
 
-# ---- footer ----
-fy = H - 140*S
-dr.line([(M, fy - 6*S), (M + 56*S, fy - 6*S)], fill=ORANGE, width=5*S)
+# ---- footer (centered, relative to code window) ----
+fy = cw_y1 + GAP_CF
 name_f = inter(31*S, 650)
 role_f = inter(22*S, 420)
-dr.text((M, fy + 14*S), AUTHOR, font=name_f, fill=WHITE)
-dr.text((M, fy + 60*S), ROLE + "  ·  Swift & SwiftUI", font=role_f, fill=MUTED)
+nw = dr.textlength(AUTHOR, font=name_f)
+role_str = ROLE + "  ·  Swift & SwiftUI"
+rw = dr.textlength(role_str, font=role_f)
+# thin separator line centered
+line_len = 48*S
+dr.line([(W//2 - line_len//2, fy - 6*S), (W//2 + line_len//2, fy - 6*S)], fill=INK, width=4*S)
+dr.text(((W - nw) // 2, fy + 14*S), AUTHOR, font=name_f, fill=INK)
+dr.text(((W - rw) // 2, fy + 60*S), role_str, font=role_f, fill=MUTED)
 
-# swift-bird-inspired swoosh mark, bottom right (original, minimal)
-sx, sy = W - M - 60*S, fy + 40*S
-dr.arc([sx-46*S, sy-46*S, sx+46*S, sy+46*S], start=300, end=140, fill=ORANGE, width=9*S)
-dr.ellipse([sx+24*S, sy-38*S, sx+40*S, sy-22*S], fill=ORANGE)
 
 # ---------------- export ----------------
 img = img.resize((1200, 1200), Image.LANCZOS)
