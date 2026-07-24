@@ -13,23 +13,22 @@ import os
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 # ---------------- content ----------------
-CARD_TYPE = "concept"          # "code" | "concept"
+CARD_TYPE = "code"          # "code" | "concept"
 
 # ---- code mode ----
-HEADLINE = "Animate numbers\nwith one modifier"
-FILENAME = "PriceView.swift"
-CODE = '''// One modifier. Buttery-smooth digits.
-
-struct PriceView: View {
-    @State private var price = 99
+HEADLINE = "Reorder any layout,\nnot just List"
+FILENAME = "StickerGrid.swift"
+CODE = '''struct StickerGrid: View {
+    @State private var items: [Sticker] = []
 
     var body: some View {
-        Text("$\\(price)")
-            .font(.system(size: 48, weight: .bold))
-            .contentTransition(.numericText())
-            .onTapGesture {
-                withAnimation(.snappy) { price = 149 }
-            }
+        LazyVGrid(columns: cols) {
+            ForEach(items) { StickerView($0) }
+                .reorderable()
+        }
+        .reorderContainer(for: Sticker.self) {
+            $0.apply(to: &items)
+        }
     }
 }'''
 
